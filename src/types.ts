@@ -7,7 +7,27 @@ export interface HistoryItem {
   note?: string;
 }
 
-export type CalculatorMode = 'standard' | 'scientific' | 'converter' | 'graph' | 'notebook';
+export type CalculatorMode = 'standard' | 'scientific' | 'converter' | 'graph' | 'notebook' | 'age' | 'vault';
+
+export interface SecurityQuestion {
+  question: string;
+  answerHash: string;
+}
+
+export interface VaultConfig {
+  authType: 'password' | 'pin';
+  passwordHash: string;
+  securityQuestions: SecurityQuestion[];
+  isSetup: boolean;
+}
+
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+}
 
 export interface CalculatorState {
   display: string;

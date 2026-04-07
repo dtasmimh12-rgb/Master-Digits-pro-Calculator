@@ -1,15 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { create, all } from 'mathjs';
 import { HistoryItem, CalculatorMode } from '../types';
-import { GoogleGenAI } from '@google/genai';
 
 const math = create(all);
 math.config({
   number: 'BigNumber',
   precision: 64
 });
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 function formatResult(res: any): string {
   if (res === null || res === undefined) return '';
@@ -32,6 +29,12 @@ export function useCalculator() {
   const [result, setResult] = useState<string | null>(null);
   const [isResultShown, setIsResultShown] = useState(false);
   const [mode, setMode] = useState<CalculatorMode>('standard');
+  const [dob, setDob] = useState<string | null>(() => {
+    return localStorage.getItem('calc-dob');
+  });
+  const [isOnboarded, setIsOnboarded] = useState<boolean>(() => {
+    return localStorage.getItem('calc-onboarded') === 'true';
+  });
   const [history, setHistory] = useState<HistoryItem[]>(() => {
     const saved = localStorage.getItem('calc-history');
     return saved ? JSON.parse(saved) : [];
@@ -43,6 +46,14 @@ export function useCalculator() {
   const [theme, setTheme] = useState<'light' | 'dark' | 'midnight' | 'emerald'>(() => {
     const saved = localStorage.getItem('calc-theme');
     return (saved as any) || 'dark';
+  });
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('calc-exchange-rates');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [lastRatesUpdate, setLastRatesUpdate] = useState<number>(() => {
+    const saved = localStorage.getItem('calc-rates-update');
+    return saved ? parseInt(saved) : 0;
   });
 
   useEffect(() => {
@@ -60,6 +71,49 @@ export function useCalculator() {
     root.classList.add(theme);
   }, [theme]);
 
+  useEffect(() => {
+    localStorage.setItem('calc-exchange-rates', JSON.stringify(exchangeRates));
+  }, [exchangeRates]);
+
+  useEffect(() => {
+    localStorage.setItem('calc-rates-update', lastRatesUpdate.toString());
+  }, [lastRatesUpdate]);
+
+  useEffect(() => {
+    if (dob) {
+      localStorage.setItem('calc-dob', dob);
+    } else {
+      localStorage.removeItem('calc-dob');
+    }
+  }, [dob]);
+
+  useEffect(() => {
+    localStorage.setItem('calc-onboarded', isOnboarded.toString());
+  }, [isOnboarded]);
+
+  const fetchExchangeRates = async () => {
+    try {
+      const response = await fetch('https://open.er-api.com/v6/latest/USD');
+      const data = await response.json();
+      if (data.result === 'success') {
+        setExchangeRates(data.rates);
+        setLastRatesUpdate(Date.now());
+        return data.rates;
+      }
+    } catch (error) {
+      console.error('Failed to fetch exchange rates:', error);
+      return exchangeRates; // Return cached rates on failure
+    }
+  };
+
+  useEffect(() => {
+    // Fetch rates if they are older than 1 hour or don't exist
+    const oneHour = 60 * 60 * 1000;
+    if (Date.now() - lastRatesUpdate > oneHour || Object.keys(exchangeRates).length === 0) {
+      fetchExchangeRates();
+    }
+  }, []);
+
   const calculate = useCallback((expr: string) => {
     try {
       if (!expr) return null;
@@ -76,40 +130,6 @@ export function useCalculator() {
       return 'Error';
     }
   }, []);
-
-  const solveAI = async (imageData: string) => {
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: [
-          {
-            parts: [
-              { text: "Solve this math problem. Return ONLY the expression and the result in JSON format: { \"expression\": \"...\", \"result\": \"...\" }. If it's complex, simplify it." },
-              { inlineData: { data: imageData.split(',')[1], mimeType: 'image/jpeg' } }
-            ]
-          }
-        ]
-      });
-      const text = response.text || '';
-      const json = JSON.parse(text.replace(/```json|```/g, '').trim());
-      return json;
-    } catch (error) {
-      console.error('AI Error:', error);
-      return null;
-    }
-  };
-
-  const parseVoice = async (transcript: string) => {
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Convert this spoken math expression into a standard mathematical expression: "${transcript}". Return ONLY the expression string, e.g. "100 + 50".`
-      });
-      return response.text?.trim() || '';
-    } catch (error) {
-      return '';
-    }
-  };
 
   const handleInput = useCallback((val: string) => {
     if (val === '=') {
@@ -206,7 +226,12 @@ export function useCalculator() {
     handleInput,
     clearHistory: () => setHistory([]),
     toggleStar,
-    solveAI,
-    parseVoice,
+    exchangeRates,
+    lastRatesUpdate,
+    fetchExchangeRates,
+    dob,
+    setDob,
+    isOnboarded,
+    setIsOnboarded,
   };
 }
