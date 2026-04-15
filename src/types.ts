@@ -5,9 +5,23 @@ export interface HistoryItem {
   timestamp: number;
   isStarred?: boolean;
   note?: string;
+  category?: 'standard' | 'scientific' | 'financial' | 'converter' | 'smart';
+  explanation?: string;
+  steps?: string[];
 }
 
-export type CalculatorMode = 'standard' | 'scientific' | 'converter' | 'graph' | 'notebook' | 'age' | 'vault';
+export type CalculatorMode = 
+  | 'standard' 
+  | 'scientific' 
+  | 'converter' 
+  | 'graph' 
+  | 'notebook' 
+  | 'age' 
+  | 'vault' 
+  | 'financial' 
+  | 'student' 
+  | 'receipt'
+  | 'smart';
 
 export interface SecurityQuestion {
   question: string;

@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 
 interface ConverterScreenProps {
   exchangeRates: Record<string, number>;
-  lastRatesUpdate: string | null;
+  lastRatesUpdate: number;
   fetchExchangeRates: () => void;
   onBack: () => void;
 }

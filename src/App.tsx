@@ -27,7 +27,11 @@ import {
   ShieldCheck,
   Settings,
   Grid3X3,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Sparkles,
+  GraduationCap,
+  FileText,
+  DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useCalculator } from './hooks/useCalculator';
@@ -67,6 +71,10 @@ import { ConverterScreen } from './components/Screens/ConverterScreen';
 import { GraphScreen } from './components/Screens/GraphScreen';
 import { NotebookScreen } from './components/Screens/NotebookScreen';
 import { HistoryScreen } from './components/Screens/HistoryScreen';
+import { FinancialScreen } from './components/Screens/FinancialScreen';
+import { StudentScreen } from './components/Screens/StudentScreen';
+import { ReceiptScreen } from './components/Screens/ReceiptScreen';
+import { SmartInputScreen } from './components/Screens/SmartInputScreen';
 
 export default function App() {
   const {
@@ -83,6 +91,8 @@ export default function App() {
     mode,
     setMode,
     handleInput,
+    handleSmartInput,
+    setHistory,
     clearHistory,
     toggleStar,
     exchangeRates,
@@ -95,6 +105,8 @@ export default function App() {
   } = useCalculator();
 
   const [showHistory, setShowHistory] = useState(false);
+  const [showSmartInput, setShowSmartInput] = useState(false);
+  const [showFeatures, setShowFeatures] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
@@ -244,7 +256,7 @@ export default function App() {
       <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full bg-card shadow-2xl relative overflow-hidden">
         
         {/* Section 1: Top Section (Display Area) */}
-        <div className="px-6 pt-8 pb-4 flex flex-col min-h-[30%] justify-between">
+        <div className="px-6 pt-8 pb-4 flex flex-col flex-shrink-0 justify-between min-h-[25%] max-h-[40%]">
           <div className="flex items-center justify-between mb-4">
             <button 
               onClick={() => setShowHistory(true)}
@@ -255,13 +267,19 @@ export default function App() {
             
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => setMode('standard')}
+                onClick={() => setShowSmartInput(true)}
+                className="p-3 rounded-2xl bg-primary/10 text-primary active:scale-90 transition-all border border-primary/20"
+              >
+                <Sparkles className="w-6 h-6" />
+              </button>
+              <button 
+                onClick={() => setShowFeatures(!showFeatures)}
                 className={cn(
                   "p-3 rounded-2xl active:scale-90 transition-all",
-                  mode === 'standard' ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+                  showFeatures ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
                 )}
               >
-                <Grid3X3 className="w-6 h-6" />
+                {showFeatures ? <X className="w-6 h-6" /> : <Grid3X3 className="w-6 h-6" />}
               </button>
               <button 
                 onClick={() => setShowThemePicker(!showThemePicker)}
@@ -310,73 +328,86 @@ export default function App() {
           </div>
         </div>
 
-        {/* Section 2: Middle Section (Feature Shortcuts / Content) */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Section 2: Middle Section (Content / Feature Grid) */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
           <AnimatePresence mode="wait">
-            <motion.div 
-              key="dashboard"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="px-6 py-4"
-            >
-              <div className="grid grid-cols-4 gap-2">
-                <FeatureItem id="age" icon={<Cake className="w-5 h-5" />} label="Age" onClick={() => setMode('age')} />
-                <FeatureItem id="converter" icon={<ArrowLeftRight className="w-5 h-5" />} label="Convert" onClick={() => setMode('converter')} />
-                <FeatureItem id="scientific" icon={<Smartphone className="w-5 h-5" />} label="Sci" onClick={() => setMode('scientific')} />
-                <FeatureItem id="vault" icon={<ShieldCheck className="w-5 h-5" />} label="Vault" onClick={() => setMode('vault')} />
-                <FeatureItem id="notebook" icon={<BookOpen className="w-5 h-5" />} label="Notes" onClick={() => setMode('notebook')} />
-                <FeatureItem id="graph" icon={<ChartIcon className="w-5 h-5" />} label="Graph" onClick={() => setMode('graph')} />
-                <FeatureItem id="history" icon={<History className="w-5 h-5" />} label="History" onClick={() => setShowHistory(true)} />
-                <FeatureItem id="settings" icon={<Settings className="w-5 h-5" />} label="Setup" onClick={() => setShowEditDob(true)} />
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Section 3: Bottom Section (Calculator Buttons) */}
-        <div className="mt-auto">
-          <div className="p-6 bg-secondary/30 backdrop-blur-xl rounded-t-[3rem] border-t border-border">
-            <div className="grid grid-cols-4 gap-3">
-              {mode === 'scientific' && (
-                <div className="col-span-4 grid grid-cols-4 gap-2 mb-3 border-b border-border pb-3">
-                  {['sin(', 'cos(', 'tan(', 'log(', 'ln(', 'sqrt(', '^', '!', 'π', 'e', '(', ')'].map((label) => (
-                    <button
-                      key={label}
-                      onClick={() => onKeyPress(label)}
-                      className="h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 bg-card text-foreground hover:bg-accent shadow-sm border border-border"
-                    >
-                      {label}
-                    </button>
-                  ))}
+            {showFeatures ? (
+              <motion.div 
+                key="features"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="absolute inset-0 p-6 overflow-y-auto"
+              >
+                <div className="grid grid-cols-4 gap-4">
+                  <FeatureItem id="age" icon={<Cake className="w-5 h-5" />} label="Age" onClick={() => { setMode('age'); setShowFeatures(false); }} />
+                  <FeatureItem id="converter" icon={<ArrowLeftRight className="w-5 h-5" />} label="Convert" onClick={() => { setMode('converter'); setShowFeatures(false); }} />
+                  <FeatureItem id="financial" icon={<DollarSign className="w-5 h-5" />} label="Finance" onClick={() => { setMode('financial'); setShowFeatures(false); }} />
+                  <FeatureItem id="student" icon={<GraduationCap className="w-5 h-5" />} label="Student" onClick={() => { setMode('student'); setShowFeatures(false); }} />
+                  <FeatureItem id="receipt" icon={<FileText className="w-5 h-5" />} label="Receipt" onClick={() => { setMode('receipt'); setShowFeatures(false); }} />
+                  <FeatureItem id="vault" icon={<ShieldCheck className="w-5 h-5" />} label="Private Vault" onClick={() => { setMode('vault'); setShowFeatures(false); }} />
+                  <FeatureItem id="notebook" icon={<BookOpen className="w-5 h-5" />} label="Quick Notes" onClick={() => { setMode('notebook'); setShowFeatures(false); }} />
+                  <FeatureItem id="graph" icon={<ChartIcon className="w-5 h-5" />} label="Graph" onClick={() => { setMode('graph'); setShowFeatures(false); }} />
                 </div>
-              )}
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="calculator"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex-1 flex flex-col"
+              >
+                {/* Calculator Buttons Section */}
+                <div className="mt-auto p-6 bg-secondary/30 backdrop-blur-xl rounded-t-[3rem] border-t border-border">
+                  <div className="grid grid-cols-4 gap-3">
+                    {mode === 'scientific' && (
+                      <div className="col-span-4 grid grid-cols-4 gap-2 mb-3 border-b border-border pb-3">
+                        {[
+                          { l: 'sin', v: 'sin(' }, { l: 'cos', v: 'cos(' }, { l: 'tan', v: 'tan(' }, { l: '√', v: 'sqrt(' },
+                          { l: 'log', v: 'log(' }, { l: 'ln', v: 'ln(' }, { l: '(', v: '(' }, { l: ')', v: ')' },
+                          { l: 'x²', v: '^2' }, { l: 'xʸ', v: '^' }, { l: 'π', v: 'π' }, { l: 'e', v: 'e' },
+                          { l: '!', v: '!' }, { l: 'deg', v: ' deg' }, { l: 'rad', v: ' rad' }, { l: 'exp', v: 'exp(' }
+                        ].map((btn) => (
+                          <button
+                            key={btn.l}
+                            onClick={() => onKeyPress(btn.v)}
+                            className="h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 bg-card text-foreground hover:bg-accent shadow-sm border border-border"
+                          >
+                            {btn.l}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-              {/* Standard Buttons */}
-              {[
-                { l: 'AC', t: 'fn' }, { l: 'C', t: 'fn', i: <Delete className="w-5 h-5" /> }, { l: '%', t: 'op' }, { l: '÷', t: 'op' },
-                { l: '7', t: 'num' }, { l: '8', t: 'num' }, { l: '9', t: 'num' }, { l: '×', t: 'op' },
-                { l: '4', t: 'num' }, { l: '5', t: 'num' }, { l: '6', t: 'num' }, { l: '-', t: 'op' },
-                { l: '1', t: 'num' }, { l: '2', t: 'num' }, { l: '3', t: 'num' }, { l: '+', t: 'op' },
-                { l: '0', t: 'num', s: 2 }, { l: '.', t: 'num' }, { l: '=', t: 'eq' }
-              ].map((btn) => (
-                <button
-                  key={btn.l}
-                  onClick={() => onKeyPress(btn.l)}
-                  className={cn(
-                    "h-16 rounded-2xl text-2xl font-bold transition-all active:scale-90 shadow-sm flex items-center justify-center",
-                    btn.s === 2 ? "col-span-2" : "col-span-1",
-                    btn.t === 'num' && "bg-card text-foreground hover:bg-accent",
-                    btn.t === 'op' && "bg-secondary text-primary hover:bg-accent",
-                    btn.t === 'fn' && "bg-secondary text-muted-foreground hover:bg-accent",
-                    btn.t === 'eq' && "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/30"
-                  )}
-                >
-                  {btn.i || btn.l}
-                </button>
-              ))}
-            </div>
-          </div>
+                    {/* Standard Buttons */}
+                    {[
+                      { l: 'AC', t: 'fn' }, { l: 'C', t: 'fn', i: <Delete className="w-5 h-5" /> }, { l: '%', t: 'op' }, { l: '÷', t: 'op' },
+                      { l: '7', t: 'num' }, { l: '8', t: 'num' }, { l: '9', t: 'num' }, { l: '×', t: 'op' },
+                      { l: '4', t: 'num' }, { l: '5', t: 'num' }, { l: '6', t: 'num' }, { l: '-', t: 'op' },
+                      { l: '1', t: 'num' }, { l: '2', t: 'num' }, { l: '3', t: 'num' }, { l: '+', t: 'op' },
+                      { l: '0', t: 'num', s: 2 }, { l: '.', t: 'num' }, { l: '=', t: 'eq' }
+                    ].map((btn) => (
+                      <button
+                        key={btn.l}
+                        onClick={() => onKeyPress(btn.l)}
+                        className={cn(
+                          "h-16 rounded-2xl text-2xl font-bold transition-all active:scale-90 shadow-sm flex items-center justify-center",
+                          btn.s === 2 ? "col-span-2" : "col-span-1",
+                          btn.t === 'num' && "bg-card text-foreground hover:bg-accent",
+                          btn.t === 'op' && "bg-secondary text-primary hover:bg-accent",
+                          btn.t === 'fn' && "bg-secondary text-muted-foreground hover:bg-accent",
+                          btn.t === 'eq' && "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/30"
+                        )}
+                      >
+                        {btn.i || btn.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Overlays / Screens */}
@@ -430,6 +461,35 @@ export default function App() {
           {mode === 'vault' && (
             <VaultScreen 
               onBack={() => setMode('standard')}
+            />
+          )}
+
+          {mode === 'financial' && (
+            <FinancialScreen 
+              onBack={() => setMode('standard')}
+              onSaveHistory={(item) => setHistory(prev => [item, ...prev].slice(0, 50))}
+            />
+          )}
+
+          {mode === 'student' && (
+            <StudentScreen 
+              onBack={() => setMode('standard')}
+              expression={expression}
+            />
+          )}
+
+          {mode === 'receipt' && (
+            <ReceiptScreen 
+              onBack={() => setMode('standard')}
+              expression={expression}
+              result={result || '0'}
+            />
+          )}
+
+          {showSmartInput && (
+            <SmartInputScreen 
+              onBack={() => setShowSmartInput(false)}
+              onProcess={handleSmartInput}
             />
           )}
 

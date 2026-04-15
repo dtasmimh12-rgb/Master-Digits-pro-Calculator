@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils';
 
 interface VaultLockProps {
   authType: 'password' | 'pin';
-  onUnlock: (password: string) => Promise<boolean>;
+  onUnlock: (password: string) => Promise<{ success: boolean; remainingAttempts?: number; lockoutTime?: number }>;
   onForgot: () => void;
 }
 
@@ -21,9 +21,16 @@ export function VaultLock({ authType, onUnlock, onForgot }: VaultLockProps) {
     setIsUnlocking(true);
     setError('');
     
-    const success = await onUnlock(password);
-    if (!success) {
-      setError('Incorrect ' + (authType === 'pin' ? 'PIN' : 'password'));
+    const result = await onUnlock(password);
+    if (!result.success) {
+      if (result.lockoutTime) {
+        const seconds = Math.ceil((result.lockoutTime - Date.now()) / 1000);
+        setError(`Too many attempts. Locked for ${seconds}s`);
+      } else if (result.remainingAttempts !== undefined) {
+        setError(`Incorrect ${authType === 'pin' ? 'PIN' : 'password'}. ${result.remainingAttempts} attempts left.`);
+      } else {
+        setError('Incorrect ' + (authType === 'pin' ? 'PIN' : 'password'));
+      }
       setPassword('');
       setIsUnlocking(false);
     }

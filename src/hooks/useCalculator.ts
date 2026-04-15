@@ -121,15 +121,44 @@ export function useCalculator() {
         .replace(/×/g, '*')
         .replace(/÷/g, '/')
         .replace(/π/g, 'pi')
-        .replace(/e/g, 'e');
+        .replace(/e/g, 'e')
+        .replace(/ln\(/g, 'log(')
+        .replace(/log\(/g, 'log10(');
       
-      finalExpr = finalExpr.replace(/(sin|cos|tan)\(([^)]+)\)/g, '$1($2 deg)');
+      // Handle trig functions with degrees by default
+      finalExpr = finalExpr.replace(/(sin|cos|tan)\(([^)]+)\)/g, (match, func, arg) => {
+        if (arg.includes('deg') || arg.includes('rad')) return match;
+        return `${func}(${arg} deg)`;
+      });
+
       const res = math.evaluate(finalExpr);
       return formatResult(res);
     } catch (error) {
       return 'Error';
     }
   }, []);
+
+  const handleSmartInput = async (input: string) => {
+    const { processSmartInput } = await import('../services/geminiService');
+    const result = await processSmartInput(input);
+    if (result) {
+      setExpression(result.expression);
+      const res = calculate(result.expression);
+      if (res && res !== 'Error') {
+        setResult(res);
+        setIsResultShown(true);
+        const newItem: HistoryItem = {
+          id: Math.random().toString(36).substr(2, 9),
+          expression: result.expression,
+          result: res,
+          timestamp: Date.now(),
+          category: 'smart',
+          note: result.explanation
+        };
+        setHistory(prev => [newItem, ...prev].slice(0, 50));
+      }
+    }
+  };
 
   const handleInput = useCallback((val: string) => {
     if (val === '=') {
@@ -140,6 +169,7 @@ export function useCalculator() {
           expression,
           result: res,
           timestamp: Date.now(),
+          category: 'standard'
         };
         setHistory(prev => [newItem, ...prev].slice(0, 50));
         setResult(res);
@@ -224,6 +254,8 @@ export function useCalculator() {
     mode,
     setMode,
     handleInput,
+    handleSmartInput,
+    setHistory,
     clearHistory: () => setHistory([]),
     toggleStar,
     exchangeRates,

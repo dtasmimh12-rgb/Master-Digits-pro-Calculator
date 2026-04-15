@@ -27,9 +27,15 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   onBack, 
   exportHistory 
 }) => {
-  const filteredHistory = history.filter(item => 
-    item.expression.includes(searchQuery) || item.result.includes(searchQuery)
-  );
+  const [activeCategory, setActiveCategory] = React.useState<string>('all');
+
+  const filteredHistory = history.filter(item => {
+    const matchesSearch = item.expression.includes(searchQuery) || item.result.includes(searchQuery);
+    const matchesCategory = activeCategory === 'all' || 
+                           (activeCategory === 'starred' && item.isStarred) ||
+                           item.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const groupedHistory = filteredHistory.reduce((acc: any, item) => {
     const date = new Date(item.timestamp);
@@ -41,6 +47,14 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
     acc[label].push(item);
     return acc;
   }, {});
+
+  const categories = [
+    { id: 'all', label: 'All' },
+    { id: 'starred', label: 'Starred' },
+    { id: 'standard', label: 'Standard' },
+    { id: 'smart', label: 'Smart' },
+    { id: 'financial', label: 'Finance' },
+  ];
 
   return (
     <motion.div 
@@ -56,14 +70,14 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
         </button>
         <div className="flex items-center gap-3">
           <History className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-bold text-foreground">Calculation History</h2>
+          <h2 className="text-xl font-bold text-foreground">History</h2>
         </div>
         <button onClick={exportHistory} className="p-3 rounded-2xl bg-secondary text-primary active:scale-90 transition-all">
           <Download className="w-6 h-6" />
         </button>
       </div>
       
-      <div className="px-6 py-6">
+      <div className="px-6 py-6 space-y-4">
         <div className="relative max-w-md mx-auto">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input 
@@ -73,6 +87,21 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide max-w-md mx-auto">
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={cn(
+                "px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                activeCategory === cat.id ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+              )}
+            >
+              {cat.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -93,7 +122,12 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
                       }}
                       className="w-full text-right"
                     >
-                      <div className="text-muted-foreground text-sm mb-2 font-medium tracking-wider">{item.expression}</div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="px-2 py-0.5 bg-primary/10 text-primary text-[8px] font-black uppercase tracking-widest rounded-full">
+                          {item.category || 'standard'}
+                        </span>
+                        <span className="text-muted-foreground text-sm font-medium tracking-wider">{item.expression}</span>
+                      </div>
                       <div className="text-3xl font-black text-foreground">{item.result}</div>
                     </button>
                     <button 
